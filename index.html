@@ -371,6 +371,11 @@
     display:flex;
     gap:10px;
   }
+  .action-hint{
+    font-size: 12px;
+    color: var(--muted);
+    margin: 8px 2px 0;
+  }
   .action-row button{
     flex:1;
     border-radius: 12px;
@@ -504,8 +509,9 @@
     </div>
     <div class="action-row">
       <button id="sendBtn" disabled onclick="sendResult()">결과 보내기 💌</button>
-      <button id="copyBtn" onclick="copyResult()">결과 복사 📋</button>
+      <button id="copyBtn" onclick="copyResult()">전체 결과 복사 📋</button>
     </div>
+    <p class="action-hint">"전체 결과 복사"는 문항별 체크 내역까지 전부 복사돼요 — 병원 EMR 문진 항목에 그대로 붙여넣기 좋아요.</p>
 
     <button id="restartBtn" onclick="restartTest()">처음부터 다시하기 ↺</button>
   </div>
@@ -715,26 +721,77 @@
     return document.getElementById('nicknameInput').value.trim();
   }
 
-  function buildResultText(){
+  function getTodayStr(){
+    const d = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  function buildHeaderLines(){
     const breakdown = getBreakdown();
     const total = breakdown.reduce((n,c)=>n+c.count,0);
     const tier = getTier(total);
     const nickname = getNickname();
-    const lines = [
-      '[자율신경 밸런스 체크 결과]',
-      `확인용 별명: ${nickname || '(미입력)'}`,
-      `총 체크: ${total} / ${TOTAL_ITEMS}`,
-      `결과: ${tier.label}`,
+    return {
+      breakdown, total, tier,
+      lines: [
+        `작성일: ${getTodayStr()}`,
+        `확인용 별명: ${nickname || '(미입력)'}`,
+        `총 체크: ${total} / ${TOTAL_ITEMS}`,
+        `결과 판정: ${tier.label} — ${tier.desc}`,
+      ],
+    };
+  }
+
+  // Short, length-bounded summary for the mailto notification (mail apps/OS
+  // intents can silently truncate very long mailto bodies).
+  function buildSummaryText(){
+    const { breakdown, lines } = buildHeaderLines();
+    return [
+      '[자율신경 밸런스 체크 결과 - 요약]',
+      ...lines,
       '',
-      '카테고리별 체크 수:',
+      '영역별 체크 수:',
       ...breakdown.map(c=>`- ${c.name}: ${c.count}/${c.items.length}`),
+      '',
+      '(전체 문항별 체크 내역은 "결과 복사"로 확인하실 수 있어요)',
+    ].join('\n');
+  }
+
+  // Full itemized checklist, formatted like a paper 초진문진표, meant to be
+  // pasted directly into an EMR free-text field. No length cap — this only
+  // goes through the clipboard, never a mailto: URL.
+  function buildEmrText(){
+    const { breakdown, total, tier, lines } = buildHeaderLines();
+    const checkedItems = breakdown.flatMap(c =>
+      c.items.filter((_,i)=>checkedState[c.id+'-'+i]).map(text => `${c.emoji} ${text}`)
+    );
+
+    const out = [
+      '[자율신경 밸런스 자가문진 결과]',
+      ...lines,
+      '',
+      '▶ 주요 호소 증상 (체크된 항목)',
+      checkedItems.length ? checkedItems.map(t=>`- ${t}`).join('\n') : '(체크된 증상 없음)',
+      '',
+      '▶ 영역별 상세 체크리스트',
     ];
-    return lines.join('\n');
+
+    breakdown.forEach(c=>{
+      out.push(`\n[${c.name}] (${c.count}/${c.items.length})`);
+      c.items.forEach((text,i)=>{
+        const mark = checkedState[c.id+'-'+i] ? '☑' : '☐';
+        out.push(`${mark} ${text}`);
+      });
+    });
+
+    return out.join('\n');
   }
 
   function sendResult(){
     if(!document.getElementById('consentCheck').checked) return;
-    const body = buildResultText();
+    const body = buildSummaryText();
     const nickname = getNickname();
     const subject = nickname
       ? `자율신경 밸런스 체크 결과 (${nickname})`
@@ -744,9 +801,9 @@
   }
 
   function copyResult(){
-    const text = buildResultText();
+    const text = buildEmrText();
     navigator.clipboard.writeText(text).then(()=>{
-      showToast('결과가 복사됐어요 📋');
+      showToast('전체 결과가 복사됐어요 · EMR에 붙여넣으세요 📋');
     }).catch(()=>{
       showToast('복사에 실패했어요');
     });
