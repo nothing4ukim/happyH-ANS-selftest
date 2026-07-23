@@ -326,6 +326,34 @@
     margin: 16px 0;
   }
 
+  .nickname-field{
+    margin-bottom: 14px;
+  }
+  .nickname-field label{
+    display:block;
+    font-size: 13.5px;
+    font-weight:600;
+    margin-bottom: 6px;
+  }
+  .nickname-field .optional{
+    font-weight:400;
+    color: var(--muted);
+  }
+  .nickname-field input{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14.5px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .nickname-field input:focus{
+    outline: none;
+    border-color: var(--accent);
+  }
+
   .consent-row{
     display:flex;
     gap:10px;
@@ -465,9 +493,14 @@
 
     <hr class="divider">
 
+    <div class="nickname-field">
+      <label for="nicknameInput">내원 시 확인용 별명 <span class="optional">(선택, 실명은 적지 마세요)</span></label>
+      <input type="text" id="nicknameInput" maxlength="20" placeholder="예: 파란고양이, 이니셜 등">
+    </div>
+
     <div class="consent-row">
       <input type="checkbox" id="consentCheck" onchange="toggleSend()">
-      <label for="consentCheck">이 결과(체크 항목 수와 등급)를 병원으로 전달하는 데 동의합니다. 이름 등 개인정보는 포함되지 않아요.</label>
+      <label for="consentCheck">이 결과(별명·체크 항목 수와 등급)를 병원으로 전달하는 데 동의합니다. 이름 등 개인정보는 포함되지 않아요.</label>
     </div>
     <div class="action-row">
       <button id="sendBtn" disabled onclick="sendResult()">결과 보내기 💌</button>
@@ -678,12 +711,18 @@
     document.getElementById('sendBtn').disabled = !document.getElementById('consentCheck').checked;
   }
 
+  function getNickname(){
+    return document.getElementById('nicknameInput').value.trim();
+  }
+
   function buildResultText(){
     const breakdown = getBreakdown();
     const total = breakdown.reduce((n,c)=>n+c.count,0);
     const tier = getTier(total);
+    const nickname = getNickname();
     const lines = [
-      '[자율신경 밸런스 체크 결과 - 익명]',
+      '[자율신경 밸런스 체크 결과]',
+      `확인용 별명: ${nickname || '(미입력)'}`,
       `총 체크: ${total} / ${TOTAL_ITEMS}`,
       `결과: ${tier.label}`,
       '',
@@ -696,7 +735,10 @@
   function sendResult(){
     if(!document.getElementById('consentCheck').checked) return;
     const body = buildResultText();
-    const subject = '자율신경 밸런스 체크 결과 (익명)';
+    const nickname = getNickname();
+    const subject = nickname
+      ? `자율신경 밸런스 체크 결과 (${nickname})`
+      : '자율신경 밸런스 체크 결과 (별명 미입력)';
     const url = `mailto:${HOSPITAL_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
   }
@@ -720,6 +762,7 @@
   function restartTest(){
     Object.keys(checkedState).forEach(k=>delete checkedState[k]);
     currentStep = 0;
+    document.getElementById('nicknameInput').value = '';
     document.getElementById('consentCheck').checked = false;
     document.getElementById('sendBtn').disabled = true;
     document.getElementById('mascot').textContent = '🌿';
