@@ -320,10 +320,63 @@
     font-size: 11px;
   }
 
+  .symptom-tags{
+    margin-top: 14px;
+  }
+  .symptom-tags .tags-label{
+    font-size: 13px;
+    font-weight:600;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+  }
+  .symptom-tags .tags-list{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 6px;
+  }
+  .symptom-tags .tag-chip{
+    display:inline-block;
+    font-size: 12.5px;
+    font-weight:600;
+    color: var(--accent-ink);
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+
   .divider{
     border:none;
     border-top:1px solid var(--hairline);
     margin: 16px 0;
+  }
+
+  .nickname-field{
+    margin-bottom: 14px;
+  }
+  .nickname-field label{
+    display:block;
+    font-size: 13.5px;
+    font-weight:600;
+    margin-bottom: 6px;
+  }
+  .nickname-field .optional{
+    font-weight:400;
+    color: var(--muted);
+  }
+  .nickname-field input{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14.5px;
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .nickname-field input:focus{
+    outline: none;
+    border-color: var(--accent);
   }
 
   .consent-row{
@@ -342,6 +395,11 @@
   .action-row{
     display:flex;
     gap:10px;
+  }
+  .action-hint{
+    font-size: 12px;
+    color: var(--muted);
+    margin: 8px 2px 0;
   }
   .action-row button{
     flex:1;
@@ -463,16 +521,24 @@
 
     <div id="breakdown"></div>
 
+    <div id="symptomTags" class="symptom-tags"></div>
+
     <hr class="divider">
+
+    <div class="nickname-field">
+      <label for="nicknameInput">내원 시 확인용 별명 <span class="optional">(선택, 실명은 적지 마세요)</span></label>
+      <input type="text" id="nicknameInput" maxlength="20" placeholder="예: 파란고양이, 이니셜 등">
+    </div>
 
     <div class="consent-row">
       <input type="checkbox" id="consentCheck" onchange="toggleSend()">
-      <label for="consentCheck">이 결과(체크 항목 수와 등급)를 병원으로 전달하는 데 동의합니다. 이름 등 개인정보는 포함되지 않아요.</label>
+      <label for="consentCheck">이 결과(별명·체크 항목 수와 등급)를 병원으로 전달하는 데 동의합니다. 이름 등 개인정보는 포함되지 않아요.</label>
     </div>
     <div class="action-row">
       <button id="sendBtn" disabled onclick="sendResult()">결과 보내기 💌</button>
-      <button id="copyBtn" onclick="copyResult()">결과 복사 📋</button>
+      <button id="copyBtn" onclick="copyResult()">전체 결과 복사 📋</button>
     </div>
+    <p class="action-hint">"전체 결과 복사"는 문항별 체크 내역까지 전부 복사돼요 — 병원 EMR 문진 항목에 그대로 붙여넣기 좋아요.</p>
 
     <button id="restartBtn" onclick="restartTest()">처음부터 다시하기 ↺</button>
   </div>
@@ -488,60 +554,60 @@
 <script>
   const CATEGORIES = [
     { id:'general', name:'전신 증상', emoji:'🌡️', items:[
-      '미열이 있는 것처럼 몸이 으슬으슬하다',
-      '최근 3개월 사이 3kg 이상 체중이 변했다',
-      '땀을 지나치게 많이 흘리거나 반대로 잘 나지 않는다',
-      '이유 없이 몸이 나른하고 쉽게 피곤하다',
-      '추위나 더위를 유난히 많이 탄다',
-      '열이 올랐다 내렸다 하며 식은땀과 오한이 있다',
+      { text:'미열이 있는 것처럼 몸이 으슬으슬하다', tag:'오한/미열감' },
+      { text:'최근 3개월 사이 3kg 이상 체중이 변했다', tag:'체중변화' },
+      { text:'땀을 지나치게 많이 흘리거나 반대로 잘 나지 않는다', tag:'발한이상' },
+      { text:'이유 없이 몸이 나른하고 쉽게 피곤하다', tag:'만성피로' },
+      { text:'추위나 더위를 유난히 많이 탄다', tag:'온도민감' },
+      { text:'열이 올랐다 내렸다 하며 식은땀과 오한이 있다', tag:'발열/식은땀' },
     ]},
     { id:'brain', name:'뇌 / 신경', emoji:'🧠', items:[
-      '잠이 잘 오지 않는다',
-      '자다가 자주 깬다',
-      '두통이 잦다',
-      '어지럼증이 있다',
-      '귀울림(이명)이 있다',
-      '편두통이 있다',
-      '눈이 쉽게 피로하고 눈꺼풀이 떨린다',
+      { text:'잠이 잘 오지 않는다', tag:'불면' },
+      { text:'자다가 자주 깬다', tag:'수면유지장애' },
+      { text:'두통이 잦다', tag:'두통' },
+      { text:'어지럼증이 있다', tag:'어지럼증' },
+      { text:'귀울림(이명)이 있다', tag:'이명' },
+      { text:'편두통이 있다', tag:'편두통' },
+      { text:'눈이 쉽게 피로하고 눈꺼풀이 떨린다', tag:'눈피로/눈떨림' },
     ]},
     { id:'scalp', name:'두피 / 피부', emoji:'💇', items:[
-      '스트레스성 탈모가 있다',
-      '지루성 두피염이 있다',
-      '피부가 거칠어지고 예민해졌다',
+      { text:'스트레스성 탈모가 있다', tag:'탈모' },
+      { text:'지루성 두피염이 있다', tag:'지루성두피염' },
+      { text:'피부가 거칠어지고 예민해졌다', tag:'피부예민' },
     ]},
     { id:'chest', name:'가슴', emoji:'❤️', items:[
-      '가슴이 두근거린다',
-      '가슴 통증이나 답답함이 있다',
-      '숨쉬기 힘들 때가 있다',
-      '가슴이 조이듯 압박감이 든다',
-      '불안감을 자주 느낀다',
-      '우울한 기분이 자주 든다',
+      { text:'가슴이 두근거린다', tag:'심계항진' },
+      { text:'가슴 통증이나 답답함이 있다', tag:'흉통/흉부답답' },
+      { text:'숨쉬기 힘들 때가 있다', tag:'호흡곤란' },
+      { text:'가슴이 조이듯 압박감이 든다', tag:'흉부압박감' },
+      { text:'불안감을 자주 느낀다', tag:'불안감' },
+      { text:'우울한 기분이 자주 든다', tag:'우울감' },
     ]},
     { id:'arm', name:'팔', emoji:'💪', items:[
-      '팔에 힘이 빠진다',
-      '목과 어깨가 자주 뭉친다',
-      '맥박이 불규칙하게 느껴진다(부정맥)',
-      '손발이 차고 저리다(수족냉증)',
-      '손이 떨리거나 조절이 잘 안 된다',
-      '팔이나 목 디스크 증상이 있다',
+      { text:'팔에 힘이 빠진다', tag:'팔 힘빠짐' },
+      { text:'목과 어깨가 자주 뭉친다', tag:'목/어깨결림' },
+      { text:'맥박이 불규칙하게 느껴진다(부정맥)', tag:'부정맥' },
+      { text:'손발이 차고 저리다(수족냉증)', tag:'수족냉증' },
+      { text:'손이 떨리거나 조절이 잘 안 된다', tag:'수전증' },
+      { text:'팔이나 목 디스크 증상이 있다', tag:'목/팔디스크' },
     ]},
     { id:'urinary', name:'비뇨기', emoji:'🚻', items:[
-      '소변을 너무 자주 본다',
-      '밤에 소변 때문에 자주 깬다(야뇨)',
-      '소변을 볼 때 통증이 있거나 참지 못한다(배뇨통/급박뇨)',
+      { text:'소변을 너무 자주 본다', tag:'빈뇨' },
+      { text:'밤에 소변 때문에 자주 깬다(야뇨)', tag:'야간뇨' },
+      { text:'소변을 볼 때 통증이 있거나 참지 못한다(배뇨통/급박뇨)', tag:'배뇨통/급박뇨' },
     ]},
     { id:'digestive', name:'소화기', emoji:'🍽️', items:[
-      '복통이 잦다',
-      '명치 끝이 답답하다',
-      '과민성 장증후군처럼 잦은 설사가 있다',
-      '소화가 잘 안 되고 속이 더부룩하다',
+      { text:'복통이 잦다', tag:'복통' },
+      { text:'명치 끝이 답답하다', tag:'명치답답' },
+      { text:'과민성 장증후군처럼 잦은 설사가 있다', tag:'과민성장증상' },
+      { text:'소화가 잘 안 되고 속이 더부룩하다', tag:'소화불량' },
     ]},
     { id:'legs', name:'다리', emoji:'🦵', items:[
-      '하체에 힘이 없다',
-      '다리에 쥐가 자주 난다',
-      '잠들기 전 다리가 불편해 뒤척인다',
-      '다리가 화끈거리거나 자주 붓는다',
-      '다리가 쉽게 저리다',
+      { text:'하체에 힘이 없다', tag:'하지 힘빠짐' },
+      { text:'다리에 쥐가 자주 난다', tag:'다리쥐' },
+      { text:'잠들기 전 다리가 불편해 뒤척인다', tag:'하지불안감' },
+      { text:'다리가 화끈거리거나 자주 붓는다', tag:'하지화끈거림/부종' },
+      { text:'다리가 쉽게 저리다', tag:'다리저림' },
     ]},
   ];
 
@@ -571,12 +637,12 @@
         <span class="count">${checkedInCat}/${cat.items.length}</span>
       </div>`;
 
-    cat.items.forEach((text, i)=>{
+    cat.items.forEach((item, i)=>{
       const key = cat.id+'-'+i;
       const isChecked = !!checkedState[key];
       html += `<div class="item ${isChecked?'checked':''}" onclick="toggleItem('${key}')">
         <input type="checkbox" id="chk-${key}" ${isChecked?'checked':''} onclick="event.stopPropagation(); toggleItem('${key}')">
-        <label for="chk-${key}">${text}</label>
+        <label for="chk-${key}">${item.text}</label>
       </div>`;
     });
 
@@ -617,6 +683,12 @@
       const count = cat.items.filter((_,i)=>checkedState[cat.id+'-'+i]).length;
       return { ...cat, count };
     });
+  }
+
+  function getCheckedTags(){
+    return CATEGORIES.flatMap(cat=>
+      cat.items.filter((_,i)=>checkedState[cat.id+'-'+i]).map(item=>item.tag)
+    );
   }
 
   function getTier(total){
@@ -669,6 +741,13 @@
       </div>`;
     }).join('');
 
+    const checkedTags = getCheckedTags();
+    const tagsWrap = document.getElementById('symptomTags');
+    tagsWrap.innerHTML = checkedTags.length
+      ? `<div class="tags-label">주요 호소 증상 (${checkedTags.length}개)</div>
+         <div class="tags-list">${checkedTags.map(t=>`<span class="tag-chip">${t}</span>`).join('')}</div>`
+      : `<div class="tags-label">체크된 증상이 없어요</div>`;
+
     if(tier.key === 'good'){
       launchConfetti();
     }
@@ -678,33 +757,100 @@
     document.getElementById('sendBtn').disabled = !document.getElementById('consentCheck').checked;
   }
 
-  function buildResultText(){
+  function getNickname(){
+    return document.getElementById('nicknameInput').value.trim();
+  }
+
+  function getTodayStr(){
+    const d = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  function buildHeaderLines(){
     const breakdown = getBreakdown();
     const total = breakdown.reduce((n,c)=>n+c.count,0);
     const tier = getTier(total);
-    const lines = [
-      '[자율신경 밸런스 체크 결과 - 익명]',
-      `총 체크: ${total} / ${TOTAL_ITEMS}`,
-      `결과: ${tier.label}`,
+    const nickname = getNickname();
+    return {
+      breakdown, total, tier,
+      lines: [
+        `작성일: ${getTodayStr()}`,
+        `확인용 별명: ${nickname || '(미입력)'}`,
+        `총 체크: ${total} / ${TOTAL_ITEMS}`,
+        `결과 판정: ${tier.label} — ${tier.desc}`,
+      ],
+    };
+  }
+
+  // Short, length-bounded summary for the mailto notification (mail apps/OS
+  // intents can silently truncate very long mailto bodies).
+  function buildSummaryText(){
+    const { breakdown, lines } = buildHeaderLines();
+    const tags = getCheckedTags();
+    const TAG_CAP = 15;
+    const tagLine = tags.length
+      ? tags.slice(0, TAG_CAP).join(', ') + (tags.length > TAG_CAP ? ` 외 ${tags.length - TAG_CAP}개` : '')
+      : '(없음)';
+    return [
+      '[자율신경 밸런스 체크 결과 - 요약]',
+      ...lines,
       '',
-      '카테고리별 체크 수:',
+      `체크된 증상: ${tagLine}`,
+      '',
+      '영역별 체크 수:',
       ...breakdown.map(c=>`- ${c.name}: ${c.count}/${c.items.length}`),
+      '',
+      '(전체 문항별 체크 내역은 "전체 결과 복사"로 확인하실 수 있어요)',
+    ].join('\n');
+  }
+
+  // Full itemized checklist, formatted like a paper intake form, meant to be
+  // pasted directly into an EMR free-text field. No length cap — this only
+  // goes through the clipboard, never a mailto: URL.
+  function buildEmrText(){
+    const { breakdown, total, tier, lines } = buildHeaderLines();
+    const checkedItems = breakdown.flatMap(c =>
+      c.items.filter((_,i)=>checkedState[c.id+'-'+i]).map(item => `${c.emoji} ${item.tag} — ${item.text}`)
+    );
+
+    const out = [
+      '[자율신경 밸런스 자가문진 결과]',
+      ...lines,
+      '',
+      '▶ 주요 호소 증상 (체크된 항목)',
+      checkedItems.length ? checkedItems.map(t=>`- ${t}`).join('\n') : '(체크된 증상 없음)',
+      '',
+      '▶ 영역별 상세 체크리스트',
     ];
-    return lines.join('\n');
+
+    breakdown.forEach(c=>{
+      out.push(`\n[${c.name}] (${c.count}/${c.items.length})`);
+      c.items.forEach((item,i)=>{
+        const mark = checkedState[c.id+'-'+i] ? '☑' : '☐';
+        out.push(`${mark} ${item.text}`);
+      });
+    });
+
+    return out.join('\n');
   }
 
   function sendResult(){
     if(!document.getElementById('consentCheck').checked) return;
-    const body = buildResultText();
-    const subject = '자율신경 밸런스 체크 결과 (익명)';
+    const body = buildSummaryText();
+    const nickname = getNickname();
+    const subject = nickname
+      ? `자율신경 밸런스 체크 결과 (${nickname})`
+      : '자율신경 밸런스 체크 결과 (별명 미입력)';
     const url = `mailto:${HOSPITAL_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
   }
 
   function copyResult(){
-    const text = buildResultText();
+    const text = buildEmrText();
     navigator.clipboard.writeText(text).then(()=>{
-      showToast('결과가 복사됐어요 📋');
+      showToast('전체 결과가 복사됐어요 · EMR에 붙여넣으세요 📋');
     }).catch(()=>{
       showToast('복사에 실패했어요');
     });
@@ -720,6 +866,7 @@
   function restartTest(){
     Object.keys(checkedState).forEach(k=>delete checkedState[k]);
     currentStep = 0;
+    document.getElementById('nicknameInput').value = '';
     document.getElementById('consentCheck').checked = false;
     document.getElementById('sendBtn').disabled = true;
     document.getElementById('mascot').textContent = '🌿';
